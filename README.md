@@ -8,6 +8,9 @@ Also, it is expected that the files to analyse have the following name structure
 **pp000-111.xml where 000 is the participant number and 111 is the sample code**
 
 Monica Aguayo
+
 PhD candidate | Department of Food Physics | Wageningen University
+
 monica.aguayomendoza@wur.nl
+
 Original source: https://github.com/monica-aguayo/oralbehavioranalysis/
