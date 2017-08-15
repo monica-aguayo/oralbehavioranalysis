@@ -1,0 +1,363 @@
+' This macro is developed to analyse the data extracted by Kinovea 0.8.15
+' for the oral processing videos of the FOP study.
+' It is important that the markers in Kinovea are labeled as "nose" and "chin"
+' and that bites are labeled as "bite" and swallows as "swallow" without numbers!
+' Also, it is expected that the files to analyse have the following name structure:
+' pp000-111.xml where 000 is the participant number and 111 is the sample code
+' Monica Aguayo
+' PhD candidate | Department of Food Physics | Wageningen University
+' monica.aguayomendoza@wur.nl
+' Original source: https://github.com/monica-aguayo/oralbehavioranalysis/
+Public swallow As Range
+Public bite As Range
+Public samplenumber As Integer
+Public endswallow As Integer
+Sub kinovea_analysis()
+Dim fd As FileDialog
+Dim SelectedItem As Variant
+Dim Workbookname As String
+Dim number_nose As String
+Dim number_chin As String
+Dim nose_label As String
+Dim line_label As String
+Dim line_find As Range
+Dim keylabels As String
+Dim numberoferrors As Integer
+Set fd = Application.FileDialog(msoFileDialogFilePicker)
+With fd
+    .AllowMultiSelect = True
+    If .Show = -1 Then
+        For Each SelectedItem In .SelectedItems
+            Workbooks.Open (SelectedItem)
+            Workbookname = ActiveWorkbook.Name
+            Range("A:C").MergeCells = False
+            samplenumber = 0
+            numberoferrors = 0
+            keylabels = error_writing
+            If keylabels <> "" Then
+                Cells(1, "N").value = Left(Workbookname, (InStrRev(Workbookname, ".", -1, vbTextCompare) - 1))
+                Cells(1, "O").value = keylabels
+                Range("N1:O1").Copy ThisWorkbook.Sheets(1).Range("J" & Rows.Count).End(xlUp).Offset(1)
+                GoTo finish
+            End If
+            Cells(1, "N").value = Left(Workbookname, (InStrRev(Workbookname, ".", -1, vbTextCompare) - 1))
+            samplenumber = Right(Cells(1, "N").value, 3)
+          If samplenumber = 539 Or samplenumber = 577 Or samplenumber = 289 Or samplenumber = 166 Or _
+                samplenumber = 671 Or samplenumber = 524 Or samplenumber = 243 Or samplenumber = 338 Then
+            Set line_find = Cells.Find(What:="Title", LookIn:=xlValues).Offset(1)
+            If line_find = "bite" Then
+                line_label = "There is no line value or it is not the first of the key images"
+                Cells(1, "N").value = Left(Workbookname, (InStrRev(Workbookname, ".", -1, vbTextCompare) - 1))
+                Cells(1, "O").value = line_label
+                Range("N1:O1").Copy ThisWorkbook.Sheets(1).Range("J" & Rows.Count).End(xlUp).Offset(1)
+                numberoferrors = numberoferrors + 1
+            End If
+            If Application.WorksheetFunction.CountIf(Columns("B"), "nose") > 1 Then
+                number_nose = "There are more than 1 nose labels"
+                Cells(1, "N").value = Left(Workbookname, (InStrRev(Workbookname, ".", -1, vbTextCompare) - 1))
+                Cells(1, "O").value = number_nose
+                Range("N1:O1").Copy ThisWorkbook.Sheets(1).Range("J" & Rows.Count).End(xlUp).Offset(1)
+                GoTo finish
+            ElseIf Application.WorksheetFunction.CountIf(Columns("B"), "nose") < 1 Then
+                numbater_nose = "There are no nose labels"
+                Cells(1, "N").value = Left(Workbookname, (InStrRev(Workbookname, ".", -1, vbTextCompare) - 1))
+                Cells(1, "O").value = number_nose
+                Range("N1:O1").Copy ThisWorkbook.Sheets(1).Range("J" & Rows.Count).End(xlUp).Offset(1)
+                GoTo finish
+            ElseIf Application.WorksheetFunction.CountIf(Columns("B"), "chin") > 1 Then
+                number_chin = "There are more than 1 chin labels"
+                Cells(1, "N").value = Left(Workbookname, (InStrRev(Workbookname, ".", -1, vbTextCompare) - 1))
+                Cells(1, "O").value = number_chin
+                Range("N1:O1").Copy ThisWorkbook.Sheets(1).Range("J" & Rows.Count).End(xlUp).Offset(1)
+                GoTo finish
+            ElseIf Application.WorksheetFunction.CountIf(Columns("B"), "chin") < 1 Then
+                number_chin = "There are no chin labels"
+                Cells(1, "N").value = Left(Workbookname, (InStrRev(Workbookname, ".", -1, vbTextCompare) - 1))
+                Cells(1, "O").value = number_chin
+                Range("N1:O1").Copy ThisWorkbook.Sheets(1).Range("J" & Rows.Count).End(xlUp).Offset(1)
+                GoTo finish
+            End If
+            If numberoferrors > 0 Then
+                GoTo finish
+            End If
+            calculate_consumption
+            copy_columns
+            time_correction
+            remove_time
+            calculate_displacement
+            first_derivative
+            Cells(1, "Q").value = peak_detection
+            Cells(1, "P").value = Application.WorksheetFunction.CountIf(Columns("A"), "swallow")
+            Workbooks(Workbookname).Sheets(1).Range("G1:M" & Cells(Rows.Count, "M").End(xlDown).Row).Copy _
+            Workbooks.Add.Worksheets(1).Range("A1")
+            ActiveWorkbook.SaveAs Filename:=ThisWorkbook.Path & "\Results\" & _
+            Left(Workbookname, (InStrRev(Workbookname, ".", -1, vbTextCompare) - 1)) & ".csv", _
+            FileFormat:=xlCSV
+            ActiveWorkbook.Close SaveChanges:=True
+          Else
+            calculate_consumption
+            Cells(1, "P").value = Application.WorksheetFunction.CountIf(Columns("A"), "swallow")
+          End If
+            Range("N1:Q1").Copy ThisWorkbook.Sheets(1).Range("A" & Rows.Count).End(xlUp).Offset(1, 2)
+            ThisWorkbook.Sheets(1).Range("A" & Rows.Count).End(xlUp).Offset(1, 1).FormulaR1C1 = "=RIGHT(RC3,3)"
+            ThisWorkbook.Sheets(1).Range("A" & Rows.Count).End(xlUp).Offset(1).FormulaR1C1 = "=MID(RC3,3,3)"
+finish:
+            Workbooks(Workbookname).Close SaveChanges:=False
+        Next SelectedItem
+    End If
+End With
+Set fd = Nothing
+ThisWorkbook.Activate
+With Range("A:F")
+    .NumberFormat = "General"
+    .value = .value
+End With
+End Sub
+Sub copy_columns()
+Dim tnose As Range
+Dim tchin As Range
+Dim ynose As Range
+Dim ychin As Range
+With Columns(2)
+    Set tnose = .Find(What:="nose", LookIn:=xlValues).Offset(2, 1)
+    Range(tnose, tnose.End(xlDown)).Copy Range("G1")
+    Range(tnose.Offset(, -2), tnose.Offset(, -1).End(xlDown)).Copy Range("H1")
+    Set xchin = .Find(What:="chin", LookIn:=xlValues).Offset(2, -1)
+    Range(xchin, xchin.Offset(, 1).End(xlDown)).Copy Range("J1")
+End With
+Cells(1, "H").value = "x_nose"
+Cells(1, "I").value = "y_nose"
+Cells(1, "J").value = "x_chin"
+Cells(1, "K").value = "y_chin"
+With Columns("G")
+    .NumberFormat = "General"
+    .value = .value
+End With
+End Sub
+Sub time_correction()
+Dim timezero As Integer
+Dim FirstEmpty As Integer
+Dim firstimage As Integer
+timezero = Cells.Find(What:="Title", LookIn:=xlValues).Offset(1)
+FirstEmpty = EmptyCell("B", 4)
+For firstimage = 4 To FirstEmpty - 1
+    Cells(firstimage, "B").value = Cells(firstimage, "B").value - timezero
+Next
+End Sub
+Sub remove_time()
+Dim firstswallow As String
+Dim loopswallow As String
+Dim firstposition As Long
+Dim finalposition As Long
+Dim returnvalue As String
+With Columns(1)
+    Set bite = .Find(What:="bite", LookIn:=xlValues, Lookat:=xlWhole, SearchOrder:=xlByRows, _
+                SearchDirection:=xlNext, MatchCase:=False)
+    Range("G2", thirdvalue).Delete Shift:=xlUp
+    Set swallow = .Find(What:="swallow", LookIn:=xlValues, Lookat:=xlWhole, SearchOrder:=xlByRows, _
+                    SearchDirection:=xlNext, MatchCase:=False)
+    If Not swallow Is Nothing Then
+        firstswallow = swallow.Address
+        Do
+            loopswallow = swallow.Address
+            If swallow.Offset(1) = "bite" Then
+                endswallow = 0
+                Range(firstvalue, secondvalue).Delete Shift:=xlUp
+            ElseIf swallow.Offset(1) = "end" Or swallow.Offset(1) = "" Then
+                endswallow = 1
+                returnvalue = firstvalue
+                If returnvalue = -1 Then
+                    GoTo exitloop
+                Else:
+                    Range(returnvalue, Cells(Rows.Count, "K").End(xlUp).Address).Delete Shift:=xlUp
+                End If
+            End If
+                Set swallow = .Find(What:="swallow", after:=Range(loopswallow), LookIn:=xlValues, _
+                            Lookat:=xlWhole, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+                            MatchCase:=False)
+        Loop While swallow.Address <> firstswallow
+exitloop:
+    End If
+End With
+End Sub
+Sub calculate_displacement()
+Cells(1, "L").value = "vd"
+Cells(2, "L").FormulaR1C1 = "=ABS(RC[-3]-RC[-1])"
+Range("L2").AutoFill Destination:=Range("L2:L" & Range("K" & Rows.Count).End(xlUp).Row)
+With Columns("L")
+    .value = .value
+End With
+End Sub
+Sub calculate_consumption()
+Dim bitefirst As String
+Dim biteloop As String
+Dim timebite As Long
+Dim totaltime As Long
+Dim time25 As Range
+totaltime = 0
+With Columns(1)
+    Set bite = .Find(What:="bite", LookIn:=xlValues, Lookat:=xlWhole, SearchOrder:=xlByRows, _
+                SearchDirection:=xlNext, MatchCase:=False)
+    If Not bite Is Nothing Then
+        bitefirst = bite.Address
+        Do
+            biteloop = bite.Address
+            timebite = bite.Offset(, 1)
+            Set swallow = .Find(What:="swallow", after:=bite, LookIn:=xlValues, _
+                            Lookat:=xlWhole, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+                            MatchCase:=False)
+            If Not swallow Is Nothing Then
+                firstswallow = swallow.Address
+                Do
+                    loopswallow = swallow.Address
+                    If swallow.Offset(1) = "bite" Then
+                        totaltime = totaltime + (swallow.Offset(, 1) - timebite)
+                        GoTo NextBite
+                    ElseIf swallow.Offset(1) = "end" Xor swallow.Offset(1) = "" Then
+                        totaltime = totaltime + (swallow.Offset(, 1) - timebite)
+                        GoTo NextBite
+                    End If
+                    Set swallow = .Find(What:="swallow", after:=Range(loopswallow), LookIn:=xlValues, _
+                            Lookat:=xlWhole, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+                            MatchCase:=False)
+                Loop While swallow.Address <> firstswallow
+NextBite:
+            End If
+            Set bite = .Find(What:="bite", after:=Range(biteloop), LookIn:=xlValues, _
+                            Lookat:=xlWhole, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+                            MatchCase:=False)
+            Loop While bite.Address <> bitefirst
+    End If
+End With
+With Columns(3)
+Set time25 = .Find(What:="t", LookIn:=xlValues, Lookat:=xlWhole, SearchOrder:=xlByRows, _
+                SearchDirection:=xlNext, MatchCase:=False)
+If time25 Is Nothing Then
+    Cells(1, "O").value = totaltime
+ElseIf time25.Offset(2) <> 40 Then
+    Cells(1, "O").value = totaltime
+Else: Cells(1, "O").value = totaltime * (25 / 29.97)
+End If
+End With
+End Sub
+Sub first_derivative()
+Cells(1, "M").value = "fd"
+Range("M2:M9").value = 0
+Cells(10, "M").Formula = "=L2*0+L3*0+L4*-5+L5*-4+L6*-3+L7*-3+L8*-2+L9*-1+L10*0+L11*1+L12*2+L13*3+L14*3+L15*4+L16*5+L17*0+L18*0"
+Range("M10").AutoFill Destination:=Range("M10:M" & Range("L" & Rows.Count).End(xlUp).Row)
+With Columns("M")
+    .value = .value
+End With
+End Sub
+Function peak_detection() As Integer
+Dim LastCell As Integer
+Dim DerRng As Integer
+LastCell = Range("M" & Rows.Count).End(xlUp).Row
+numberpeaks = 0
+For DerRng = 2 To LastCell
+    If Cells(DerRng, "L").value > 4 Then
+        If Sgn(Cells(DerRng, "M").value) > Sgn(Cells(DerRng, "M").Offset(1).value) Then
+            If Cells(DerRng, "M").value - Cells(DerRng, "M").Offset(1).value > 0.5 Then
+                numberpeaks = numberpeaks + 1
+            End If
+        End If
+    End If
+Next
+peak_detection = numberpeaks
+End Function
+Function error_writing() As String
+Dim FirstEmpty As Integer
+Dim firstlabel As Integer
+Dim originaltext As String
+FirstEmpty = EmptyCell("A", 4)
+For firstlabel = 5 To FirstEmpty - 1
+    originaltext = Cells(firstlabel, "A").value
+    Cells(firstlabel, "A").value = Replace(originaltext, " ", "")
+    If Cells(firstlabel, "A").value <> "bite" And Cells(firstlabel, "A").value <> "swallow" _
+        And Cells(firstlabel, "A").value <> "end" Then
+        error_writing = "At least one of the labels is different from bite or swallow"
+        Exit For
+    End If
+Next
+End Function
+Function EmptyCell(sourceCol As String, sourceRow As Integer) As Integer
+Dim LastRow As Integer
+Dim currentRow As Integer
+Dim currentRowValue As String
+LastRow = Range(sourceCol & Rows.Count).End(xlUp).Row
+For currentRow = sourceRow To LastRow
+    currentRowValue = Cells(currentRow, sourceCol).value
+    If IsEmpty(currentRowValue) Or currentRowValue = "" Then
+        EmptyCell = Cells(currentRow, sourceCol).Row
+        Exit For
+    End If
+Next
+End Function
+Function firstvalue() As String
+Dim add1 As Long
+Dim fvalue As Range
+add1 = swallow.Offset(, 1).value
+With Columns("G")
+    Set fvalue = .Find(What:=add1, LookIn:=xlValues, Lookat:=xlWhole)
+    If fvalue Is Nothing Then
+        add1 = add1 - 1
+        Set fvalue = .Find(What:=add1, LookIn:=xlValues, Lookat:=xlWhole)
+        If fvalue Is Nothing Then
+            add1 = add1 - 1
+            Set fvalue = .Find(What:=add1, LookIn:=xlValues, Lookat:=xlWhole)
+            If fvalue Is Nothing Then
+                add1 = add1 + 3
+                Set fvalue = .Find(What:=add1, LookIn:=xlValues, Lookat:=xlWhole)
+            End If
+        End If
+    End If
+    If endswallow = 1 And fvalue Is Nothing Then
+        firstvalue = -1
+    Else:
+        firstvalue = fvalue.Offset(1).Address
+    End If
+End With
+End Function
+Function secondvalue() As String
+Dim add1 As Long
+Dim fvalue As Range
+add1 = swallow.Offset(1, 1).value
+With Columns("G")
+    Set fvalue = .Find(What:=add1, LookIn:=xlValues, Lookat:=xlWhole)
+    If fvalue Is Nothing Then
+        add1 = add1 - 1
+        Set fvalue = .Find(What:=add1, LookIn:=xlValues, Lookat:=xlWhole)
+        If fvalue Is Nothing Then
+            add1 = add1 - 1
+            Set fvalue = .Find(What:=add1, LookIn:=xlValues, Lookat:=xlWhole)
+            If fvalue Is Nothing Then
+                add1 = add1 + 3
+                Set fvalue = .Find(What:=add1, LookIn:=xlValues, Lookat:=xlWhole)
+            End If
+        End If
+    End If
+    secondvalue = fvalue.Offset(-1, 5).Address
+End With
+End Function
+Function thirdvalue() As String
+Dim add1 As Long
+Dim fvalue As Range
+add1 = bite.Offset(, 1).value
+With Columns("G")
+    Set fvalue = .Find(What:=add1, LookIn:=xlValues, Lookat:=xlWhole)
+    If fvalue Is Nothing Then
+        add1 = add1 - 1
+        Set fvalue = .Find(What:=add1, LookIn:=xlValues, Lookat:=xlWhole)
+        If fvalue Is Nothing Then
+            add1 = add1 - 1
+            Set fvalue = .Find(What:=add1, LookIn:=xlValues, Lookat:=xlWhole)
+            If fvalue Is Nothing Then
+                add1 = add1 + 3
+                Set fvalue = .Find(What:=add1, LookIn:=xlValues, Lookat:=xlWhole)
+            End If
+        End If
+    End If
+    thirdvalue = fvalue.Offset(-1, 5).Address
+End With
+End Function
+' Original source: https://github.com/monica-aguayo/oralbehavioranalysis/
