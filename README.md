@@ -7,10 +7,10 @@ It is important that the markers in Kinovea are labeled as "nose" and "chin" and
 Also, it is expected that the files to analyse have the following name structure:
 **pp000-111.xml where 000 is the participant number and 111 is the sample code**
 
-Monica Aguayo
+*Monica Aguayo*
 
-PhD candidate | Department of Food Physics | Wageningen University
+*PhD candidate | Department of Food Physics | Wageningen University*
 
-monica.aguayomendoza@wur.nl
+*monica.aguayomendoza@wur.nl*
 
-Original source: https://github.com/monica-aguayo/oralbehavioranalysis/
+*Original source: https://github.com/monica-aguayo/oralbehavioranalysis/*
